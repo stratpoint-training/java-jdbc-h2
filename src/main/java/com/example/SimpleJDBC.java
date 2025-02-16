@@ -8,6 +8,7 @@ import java.util.Scanner;
 import org.h2.tools.Server;
 
 public class SimpleJDBC {
+    // Database Config (loaded from application.properties)
     private static String JDBC_URL;
     private static String USER;
     private static String PASSWORD;
@@ -16,22 +17,23 @@ public class SimpleJDBC {
     private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
-        // Load application.properties
+        // 🛠 Load configuration from application.properties
         loadConfig();
 
-        // Start H2 Console
+        // 🚀 Start H2 Web Console (for debugging)
         startH2Console();
 
-        try (Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
-             Statement stmt = conn.createStatement()) {
+        try (Connection conn = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
+            // 🔥 Enable transactions (so we can rollback if needed)
+            conn.setAutoCommit(false);
 
-            // Create table if not exists
-            stmt.execute("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))");
-            System.out.println("✅ Table 'users' created!\n");
+            // 🏗️ Create table if it doesn't exist
+            createTable(conn);
 
             while (true) {
-                System.out.println("📌 Choose an action:");
-                System.out.println("1️⃣ Insert User");
+                // 🕹️ Display Menu
+                System.out.println("\n📌 Choose an action:");
+                System.out.println("1️⃣ Insert User (Safe Transaction)");
                 System.out.println("2️⃣ View Users");
                 System.out.println("3️⃣ Update User");
                 System.out.println("4️⃣ Delete User");
@@ -41,24 +43,31 @@ public class SimpleJDBC {
                 int choice = scanner.nextInt();
                 scanner.nextLine(); // Consume newline
 
-                switch (choice) {
-                    case 1:
-                        insertUser(conn);
-                        break;
-                    case 2:
-                        viewUsers(conn);
-                        break;
-                    case 3:
-                        updateUser(conn);
-                        break;
-                    case 4:
-                        deleteUser(conn);
-                        break;
-                    case 5:
-                        System.out.println("👋 Exiting... Goodbye!");
-                        return;
-                    default:
-                        System.out.println("❌ Invalid choice! Try again.");
+                try {
+                    switch (choice) {
+                        case 1:
+                            insertUser(conn);
+                            break;
+                        case 2:
+                            viewUsers(conn);
+                            break;
+                        case 3:
+                            updateUser(conn);
+                            break;
+                        case 4:
+                            deleteUser(conn);
+                            break;
+                        case 5:
+                            System.out.println("👋 Exiting... Goodbye!");
+                            return;
+                        default:
+                            System.out.println("❌ Invalid choice! Try again.");
+                    }
+                    conn.commit(); // ✅ Commit transaction (if everything is good)
+                } catch (Exception e) {
+                    conn.rollback(); // ❌ Rollback transaction if there's an error!
+                    System.out.println("⚠️ Transaction rolled back!");
+                    e.printStackTrace();
                 }
             }
         } catch (SQLException e) {
@@ -66,7 +75,7 @@ public class SimpleJDBC {
         }
     }
 
-    // Load Configuration from application.properties
+    // 🛠 Load Configuration from application.properties
     private static void loadConfig() {
         Properties properties = new Properties();
         try (InputStream input = SimpleJDBC.class.getClassLoader().getResourceAsStream("application.properties")) {
@@ -79,13 +88,12 @@ public class SimpleJDBC {
             USER = properties.getProperty("db.user");
             PASSWORD = properties.getProperty("db.password");
             H2_PORT = Integer.parseInt(properties.getProperty("h2.console.port"));
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // Start H2 Web Console
+    // 🚀 Start H2 Web Console (For Debugging)
     private static void startH2Console() {
         try {
             Server.createWebServer("-web", "-webPort", String.valueOf(H2_PORT)).start();
@@ -95,7 +103,16 @@ public class SimpleJDBC {
         }
     }
 
-    // Insert User
+    // 🏗️ Create Users Table (if it doesn't exist)
+    private static void createTable(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            System.out.println("✅ Table 'users' ready!");
+        }
+    }
+
+    // 🆕 Insert a User (with PreparedStatement & Transaction)
     private static void insertUser(Connection conn) {
         System.out.print("👤 Enter name: ");
         String name = scanner.nextLine();
@@ -104,17 +121,17 @@ public class SimpleJDBC {
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, name);
             pstmt.executeUpdate();
-            System.out.println("✅ User added successfully!\n");
+            System.out.println("✅ User added successfully!");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // View Users
+    // 📋 View All Users
     private static void viewUsers(Connection conn) {
         String sql = "SELECT * FROM users";
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
 
             System.out.println("\n📋 User List:");
             while (rs.next()) {
@@ -126,7 +143,7 @@ public class SimpleJDBC {
         }
     }
 
-    // Update User
+    // ✏️ Update User Name
     private static void updateUser(Connection conn) {
         System.out.print("🆔 Enter user ID to update: ");
         int id = scanner.nextInt();
@@ -140,16 +157,16 @@ public class SimpleJDBC {
             pstmt.setInt(2, id);
             int rows = pstmt.executeUpdate();
             if (rows > 0) {
-                System.out.println("✅ User updated successfully!\n");
+                System.out.println("✅ User updated successfully!");
             } else {
-                System.out.println("❌ User not found!\n");
+                System.out.println("❌ User not found!");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // Delete User
+    // 🗑️ Delete User
     private static void deleteUser(Connection conn) {
         System.out.print("🆔 Enter user ID to delete: ");
         int id = scanner.nextInt();
@@ -159,9 +176,9 @@ public class SimpleJDBC {
             pstmt.setInt(1, id);
             int rows = pstmt.executeUpdate();
             if (rows > 0) {
-                System.out.println("🗑️ User deleted successfully!\n");
+                System.out.println("🗑️ User deleted successfully!");
             } else {
-                System.out.println("❌ User not found!\n");
+                System.out.println("❌ User not found!");
             }
         } catch (SQLException e) {
             e.printStackTrace();

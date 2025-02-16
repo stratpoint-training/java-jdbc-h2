@@ -23,5 +23,7 @@
 hs_err_pid*
 replay_pid*
 
-*.lock.db
+# Ignore H2 database files
+*.db
 *.mv.db
+*.lock.db
