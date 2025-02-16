@@ -12,7 +12,7 @@ _A simple yet powerful Java JDBC app with H2 Database (MySQL Mode)!_ 😎
 ## **🚀 Getting Started**
 ### **1️⃣ Clone the Repository**
 ```bash
-git clone https://github.com/your-username/SimpleJDBC.git
+git clone https://github.com/stratpoint-training/java-jdbc-h2.git
 cd SimpleJDBC
 ```
 
