@@ -31,8 +31,8 @@ If using **Maven**, make sure your `pom.xml` has:
 ### **3️⃣ Run the Java App**
 Compile and run:
 ```bash
-mvn clean package
-java -jar target/SimpleJDBC.jar
+mvn clean compile exec:java -Dexec.mainClass="com.example.SimpleJDBC"
+
 ```
 Or run directly via **IDE (IntelliJ / Eclipse)**.
 
